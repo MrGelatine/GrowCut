@@ -1,53 +1,176 @@
-<html lang="en">
-<head>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Opencv JS</title>
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-    <script async src="js/opencv.js" onload="openCvReady();"></script>
-    <script src="js/face_detection.js"></script>
-    <script src="js/utils.js"></script>
-</head>
-<body>
-<div>
-    <table cellpadding="0" cellspacing="0" width="0" border="0">
-        <tbody><tr>
-            <td>
-                <canvas id="canvasOutput" width="320" height="240"></canvas>
-            </td>
-            <td>
-                <canvas id="canvasHist" width="320" height="240"></canvas>
-            </td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>
-                <div class="caption">canvasOutput</div>
-            </td>
-            <td></td>
-            <td></td>
-        </tr>
-        </tbody></table>
-        <video id="cameraInput" width="320" height="240" style="display:none"></video>
-</div>
-<button id="startAndStop" onclick="cameraChange('')" disabled>Start</button>
+<html>
+<script src="grow_cut.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>
+<script type="text/javascript">
+    var color = "black";
+    var canvas, h_canvas, ctx,h_ctx, flag = false,
+        prevX = 0,
+        currX = 0,
+        prevY = 0,
+        currY = 0,
+        dot_flag = false;
+
+    var col = "black",
+        y = 2;
+
+    function init() {
+        canvas = document.getElementById('can');
+        h_canvas = document.getElementById('h_can');
+        ctx = canvas.getContext("2d");
+        h_ctx = h_canvas.getContext("2d");
+        w = canvas.width;
+        h = canvas.height;
+
+        canvas.addEventListener("mousemove", function (e) {
+            console.log(e.button);
+            if(e.button == 0)
+                findxy('move',color,3, e);
+            if(e.button == 2)
+                findxy('move',color,3, e);
+        }, false);
+        canvas.addEventListener("mousedown", function (e) {
+            console.log(e.button);
+            if(e.button == 0)
+                color = "blue";
+                findxy('down',color,3, e);
+            if(e.button == 2)
+                color = "red";
+                findxy('down',color,3, e);
+        }, false);
+        canvas.addEventListener("mouseup", function (e) {
+            console.log(e.button);
+            if(e.button == 0)
+                color = "blue";
+                findxy('up',color,3, e);
+            if(e.button == 2)
+                color = "red";
+                findxy('up',color,3, e);
+        }, false);
+        canvas.addEventListener("mouseout", function (e) {
+            console.log(e.button);
+            if(e.button == 0)
+                findxy('out',color,3, e);
+            if(e.button == 2)
+                findxy('out',color,3, e);
+        }, false);
+
+        //Hidden Canvas
+
+    }
+
+    function draw(color, br_sz) {
+        ctx.beginPath();
+        ctx.arc(currX, currY, br_sz, 0, 2 * Math.PI, false)
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = br_sz;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+        ctx.fill();
+        ctx.closePath();
+
+        h_ctx.beginPath();
+        h_ctx.arc(currX, currY, br_sz, 0, 2 * Math.PI, false)
+        h_ctx.fillStyle = color;
+        h_ctx.strokeStyle = color;
+        h_ctx.lineWidth = br_sz;
+        h_ctx.strokeStyle = color;
+        h_ctx.stroke();
+        h_ctx.fill();
+        h_ctx.closePath();
+    }
+
+    function erase() {
+        var m = confirm("Want to clear");
+        if (m) {
+            ctx.clearRect(0, 0, w, h);
+            document.getElementById("can").style.display = "none";
+
+            h_ctx.clearRect(0, 0, w, h);
+            document.getElementById("h_can").style.display = "none";
+        }
+    }
+
+    function findxy(res, color, br_sz, e) {
+        if (res == 'down') {
+            prevX = currX;
+            prevY = currY;
+            currX = e.clientX - canvas.offsetLeft;
+            currY = e.clientY - canvas.offsetTop;
+
+            flag = true;
+            dot_flag = true;
+            if (dot_flag) {
+                ctx.beginPath();
+                ctx.fillStyle = color;
+                ctx.arc(currX, currY, br_sz, 0, 2 * Math.PI, false)
+                ctx.closePath();
+
+                h_ctx.beginPath();
+                h_ctx.fillStyle = color;
+                h_ctx.arc(currX, currY, br_sz, 0, 2 * Math.PI, false)
+                h_ctx.closePath();
+                dot_flag = false;
+            }
+        }
+        if (res == 'up' || res == "out") {
+            flag = false;
+        }
+        if (res == 'move') {
+            if (flag) {
+                prevX = currX;
+                prevY = currY;
+                currX = e.clientX - canvas.offsetLeft;
+                currY = e.clientY - canvas.offsetTop;
+                draw(color, br_sz);
+            }
+        }
+    }
+</script>
+<script type="text/javascript">
+    window.addEventListener('load', function() {
+        document.querySelector('input[type="file"]').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                var img = new Image();
+                var can = document.getElementById('can');
+                var ctx = can.getContext("2d");
+
+                var h_can = document.getElementById('h_can');
+                var h_ctx = h_can.getContext('2d');
+
+                var n_can =  document.getElementById("real_img");
+                var n_ctx = n_can.getContext('2d');
+
+                img.src = URL.createObjectURL(this.files[0]); // set src to blob url
+                img.onload = function() {
+                    ctx.height = can.height;
+                    ctx.width = can.width
+                    ctx.drawImage(img, 0, 0,ctx.width,ctx.height); // draw the image to the canvas
+
+                    h_ctx.width = ctx.height;
+                    h_ctx.height = ctx.width;
+                    h_ctx.fillStyle = '#000000';
+                    h_ctx.fillRect(0,0,h_can.width,h_can.height);
+
+                    n_ctx.width = ctx.height;
+                    n_ctx.height = ctx.width;
+                    n_ctx.drawImage(img, 0, 0,ctx.width,ctx.height);
+                }
+                console.log(can.width,can.height);
+                console.log(h_can.width,h_can.height);
+            }
+        });
+    });
+</script>
+<body onload="init()">
+    <input type='file' />
+    <input type="button" value="set" id="btn"onclick="loadImageToTensor(document.getElementById('real_img'),document.getElementById('h_can'));">
+    <input type="button" value="step" id="clr"onclick="makeIteration(document.getElementById('h_can'))">
+    <canvas id="real_img" height="200" width=150 hidden></canvas>
+    <div >Choose Color</div>
+    <div>Eraser</div>
+    <canvas id="can" height="200" width=150></canvas>
+    <canvas id="h_can" height="200" width=150></canvas>
+
 </body>
-<div class="dropdown show">
-    <a class="btn btn-secondary dropdown-toggle" id="option_menu" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Options
-    </a>
-
-    <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
-        <a class="dropdown-item" href="#" onclick="restartCameraWith('Empty')">Empty</a>
-        <a class="dropdown-item" href="#" onclick="restartCameraWith('Eyes Detection')">Eyes Detection</a>
-        <a class="dropdown-item" href="#" onclick="restartCameraWith('Face Detection')">Face Detection</a>
-        <a class="dropdown-item" href="#" onclick="restartCameraWith('Face + Eyes')">Face + Eyes</a>
-
-    </div>
-</div>
-
 </html>
